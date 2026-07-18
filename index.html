@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>World Cup 2026 — Tournament Simulator</title>
+<meta charset="UTF-8">
+<style>
+    :root {
+        --blue: #191970;
+        --ink: #000000;
+        --graphite: #4e4e4e;
+        --mist: #c8c8c8;
+        --canvas: #ffffff;
+        --font-display: "Helvetica Neue", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        --font-body: "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; background: var(--canvas); color: var(--ink); font-family: var(--font-body); }
+    .hero {
+        position:relative; min-height: 680px; overflow:hidden;
+        background: radial-gradient(ellipse at 50% 50%, rgba(0,49,83,0.35) 0%, rgba(0,49,83,0.08) 50%, #ffffff 100%);
+        display:flex; flex-direction:column; align-items:center; justify-content:center;
+        text-align:center; padding: 40px;
+    }
+    .scroll-tag {
+        position:absolute; left:24px; top:50%; transform: translateY(-50%) rotate(-90deg) translateX(50%);
+        font-size:10px; letter-spacing:0.15em; color: var(--blue);
+    }
+    nav.topnav {
+        position:absolute; top:0; left:0; right:0; display:flex; justify-content:space-between; align-items:center;
+        padding: 26px 60px;
+    }
+    .wordmark { font-size:14px; color: var(--blue); font-weight:600; letter-spacing:0.02em; }
+    .nav-links { display:flex; gap:26px; font-size:11px; letter-spacing:0.1em; color: var(--blue); text-transform:uppercase; }
+    button {
+        font-family: var(--font-body); cursor:pointer; background:transparent;
+    }
+    .pill-ghost-nav {
+        border:1px solid var(--blue); color: var(--blue);
+        border-radius:22.5px; padding:11px 23px; font-size:11px; letter-spacing:0.08em; text-transform:uppercase;
+    }
+    .eyebrow {
+        font-size:11px; letter-spacing:0.15em; text-transform:uppercase; color: var(--blue); margin-bottom:20px;
+    }
+    h1.display {
+        font-family: var(--font-display); font-weight:300; font-size:80px; line-height:1.0;
+        color: var(--blue); margin:0 0 26px; max-width:900px;
+    }
+    p.hero-body { font-size:15px; line-height:1.3; color: var(--graphite); max-width:45ch; margin: 0 0 40px; }
+    .pill-ghost { border:1px solid var(--blue); color: var(--blue); border-radius:22.5px; padding:11px 23px; font-size:12px; letter-spacing:0.06em; text-transform:uppercase; }
+    .pill-ghost:hover, .pill-ghost-nav:hover { background: rgba(0,49,83,0.06); }
+
+    /* ---------------- Sections ---------------- */
+    .section { max-width:1200px; margin:0 auto; padding: 75px 60px; }
+    .eyebrow-label { font-size:11px; letter-spacing:0.15em; text-transform:uppercase; color: var(--blue); margin-bottom:18px; }
+    h2.heading-sm { font-family: var(--font-display); font-weight:300; font-size:45px; color: var(--blue); margin:0 0 18px; line-height:1.1; }
+    p.section-body { font-size:15px; color: var(--graphite); max-width:60ch; line-height:1.3; margin: 0 0 34px; }
+
+    .legend { display:flex; gap:24px; margin-bottom:24px; flex-wrap:wrap; }
+    .legend-item { display:flex; align-items:center; gap:8px; font-size:12px; color: var(--graphite); text-transform:uppercase; letter-spacing:0.04em; }
+    .dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+    .dot-win { background: var(--blue); }
+    .dot-loss { background: var(--mist); }
+    .dot-pen { background: var(--ink); }
+
+    /* ---------------- Groups ---------------- */
+    .groups-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(210px,1fr)); gap:15px; }
+    .group-box { border:1px solid var(--mist); border-radius:15px; padding:23px; opacity:0; animation: fadeIn .35s ease forwards; }
+    .group-box h4 { margin:0 0 12px 0; font-size:12px; text-transform:uppercase; letter-spacing:.08em; color: var(--blue); font-weight:600; }
+    .group-row { display:flex; justify-content:space-between; font-size:13px; padding:5px 0; border-bottom:1px solid #f2f0ee; }
+    .group-row:last-child { border-bottom:none; }
+    .group-row .pos { color: var(--mist); width:16px; font-weight:600; }
+    .group-row.qualified { color: var(--blue); font-weight:600; }
+    .group-row.eliminated { color: var(--mist); }
+    .down-note { text-align:center; font-size:12px; color: var(--graphite); margin:30px 0; font-style:italic; }
+
+    @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+
+    /* ---------------- Bracket tree ---------------- */
+    .bracket-scroll { overflow-x:auto; padding: 6px 0 10px; }
+    .bracket-grid { display:grid; grid-template-columns: repeat(16, minmax(92px, 1fr)); row-gap: 0; column-gap: 8px; min-width: 1140px; }
+    .round-label { grid-column: 1 / -1; font-size:11px; font-weight:600; color: var(--graphite); text-transform:uppercase; letter-spacing:.08em; text-align:center; margin: 14px 0 6px; }
+    .match-box { background:#fff; border:1px solid var(--mist); border-radius:10px; padding:8px 10px; font-size:12.5px; opacity:0; animation: fadeIn .3s ease forwards; }
+    .team { display:flex; justify-content:space-between; padding:2.5px 0; }
+    .team.winner { color: var(--blue); font-weight:600; }
+    .team.loser { color: var(--mist); }
+    .pen-tag { font-size:10px; color: var(--ink); margin-top:4px; font-weight:600; }
+
+    .connector { position:relative; height:22px; }
+    .connector::before { content:''; position:absolute; top:0; left:25%; width:50%; height:1px; background: var(--mist); }
+    .connector::after { content:''; position:absolute; top:0; left:50%; width:1px; height:100%; background: var(--mist); }
+    .connector.single::before { left:50%; width:0; }
+
+    
+.champion-box {
+    grid-column: 1 / -1;
+    justify-self: center;
+
+    width: 650px;
+    min-height: 180px;
+
+    position: relative;
+    overflow: hidden;
+
+    background:
+        radial-gradient(
+            ellipse at center,
+            rgba(255,255,255,0.18) 0%,
+            rgba(255,255,255,0.08) 35%,
+            rgba(255,255,255,0.03) 60%,
+            transparent 80%
+        ),
+        var(--blue);
+
+    color: white;
+    border: none;
+    border-radius: 0;
+
+    padding: 45px 30px;
+    text-align: center;
+
+    opacity: 0;
+    animation: popIn .45s ease forwards;
+}
+
+.champion-box .spark { display:none; }
+
+.champion-box span.label {
+    position: relative;
+    z-index: 1;
+    display:block;
+    color: rgba(255,255,255,0.75);
+    font-size: 12px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+}
+
+.champion-box span.name {
+    position: relative;
+    z-index: 1;
+    display:block;
+    margin-top: 12px;
+    font-size: 34px;
+    font-weight: 700;
+    color: white;
+}
+
+@keyframes popIn
+ { from { transform: scale(0.92); opacity:0; } to { transform: scale(1); opacity:1; } }
+
+    /* ---------------- Loading ---------------- */
+    .loading-box { text-align:center; padding: 40px 0; }
+    .loading-text { color: var(--graphite); font-size:13px; text-transform:uppercase; letter-spacing:0.08em; }
+    .pulse-bar { width:140px; height:1px; background: var(--mist); margin:16px auto 0; position:relative; overflow:hidden; }
+    .pulse-bar::before { content:''; position:absolute; left:-40%; top:0; width:40%; height:100%; background: var(--blue); animation: pulseMove 1s ease-in-out infinite; }
+    @keyframes pulseMove { 0% { left:-40%; } 100% { left:100%; } }
+
+    /* ---------------- Results table ---------------- */
+    table { width:100%; border-collapse:collapse; margin-top:8px; }
+    td, th { padding:11px 8px; border-bottom:1px solid var(--mist); text-align:left; font-size:14px; }
+    th { color: var(--blue); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.06em; }
+    tr:first-of-type td { font-weight:600; }
+    tr td:first-child { color: var(--graphite); }
+    #status { color: var(--graphite); font-size:12px; margin-top:2px; text-transform:uppercase; letter-spacing:0.04em; }
+
+    /* ---------------- Feature row ---------------- */
+    .feature-row { display:flex; gap:60px; margin-top:20px; flex-wrap:wrap; }
+    .feature-item .num { font-size:11px; color: var(--blue); margin-bottom:6px; }
+    .feature-item .lbl { font-size:13px; text-transform:uppercase; letter-spacing:0.04em; }
+
+    footer { padding: 45px 60px; text-align:center; color: var(--mist); font-size:11px; border-top:1px solid var(--mist); }
+</style>
+</head>
+<body>
+
+<div class="hero">
+    <div class="scroll-tag">SCROLL</div>
+    <nav class="topnav">
+        <span class="wordmark"> World Cup 2026</span>
+        <div class="nav-links"><span>GROUPS</span><span>BRACKET</span><span>RESULTS</span></div>
+        <button class="pill-ghost-nav" onclick="startMonteCarlo()">RUN SIM</button>
+    </nav>
+
+    <div class="eyebrow">self simulation engine</div>
+    <h1 class="display">Predict who<br>lifts the<br>World Cup.</h1>
+    <p class="hero-body">Works based on Elo ratings, Poisson-modeled scorelines, and Monte Carlo simulation .</p>
+    <button class="pill-ghost" onclick="startSimulateTournament()">Simulate tournament →→</button>
+
+    <div class="feature-row">
+        <div class="feature-item"><div class="num">01</div><div class="lbl">Elo ratings</div></div>
+        <div class="feature-item"><div class="num">02</div><div class="lbl">Poisson goals</div></div>
+        <div class="feature-item"><div class="num">03</div><div class="lbl">Monte Carlo</div></div>
+    </div>
+</div>
+
+<div id="flowSection" style="display:none;">
+    <div class="section">
+        <div class="eyebrow-label">Group stage</div>
+        <h2 class="heading-sm">48 teams, 12 groups.</h2>
+        <p class="section-body">Every group plays a full round robin. Top two, plus the best eight third-place finishers, advance to the knockout bracket.</p>
+        <div class="groups-grid" id="groupsContainer"></div>
+    </div>
+
+    <div class="down-note">↓ top two, plus the best eight third-place teams, advance ↓</div>
+
+    <div class="section">
+        <div class="eyebrow-label">Knockout bracket</div>
+        <h2 class="heading-sm">Round of 32 to the Final.</h2>
+        <div class="legend">
+            <span class="legend-item"><span class="dot dot-win"></span> Won / advanced</span>
+            <span class="legend-item"><span class="dot dot-loss"></span> Eliminated</span>
+            <span class="legend-item"><span class="dot dot-pen"></span> Won on penalties</span>
+        </div>
+        <div class="bracket-scroll">
+            <div class="bracket-grid" id="bracketGrid"></div>
+        </div>
+    </div>
+</div>
+
+<div class="section">
+    <div id="mcLoading" style="display:none;" class="loading-box">
+        <div class="loading-text">Simulating 10,000 tournaments</div>
+        <div class="pulse-bar"></div>
+    </div>
+
+    <div id="mcSection" style="display:none;">
+        <div class="eyebrow-label">Title probabilities</div>
+        <h2 class="heading-sm">Who wins it all.</h2>
+        <p id="status" class="section-body"></p>
+        <table id="results"></table>
+    </div>
+</div>
+
+<script>
+// ---------------------------------------------------------------------
+// TEAM ELO RATINGS
+// ---------------------------------------------------------------------
+const ELO = {
+    "Spain": 2159, "Argentina": 2151, "France": 2134, "England": 2046,
+    "Brazil": 2031, "Portugal": 2013, "Colombia": 2004, "Netherlands": 1971,
+    "Mexico": 1943, "Switzerland": 1943, "Norway": 1934, "Belgium": 1910,
+    "Germany": 1905, "Croatia": 1885, "Uruguay": 1880, "Morocco": 1875,
+    "USA": 1850, "Senegal": 1835, "Japan": 1825, "Ecuador": 1815,
+    "Turkiye": 1830, "Egypt": 1800, "Ivory Coast": 1795, "Sweden": 1790,
+    "Austria": 1800, "Iran": 1780, "Canada": 1770, "Ghana": 1760,
+    "Algeria": 1770, "Scotland": 1760, "South Korea": 1780, "Tunisia": 1750,
+    "Australia": 1745, "Paraguay": 1740, "Czechia": 1740, "Saudi Arabia": 1730,
+    "Bosnia and Herzegovina": 1730, "Iraq": 1655, "Uzbekistan": 1650,
+    "Cape Verde": 1650, "DR Congo": 1650, "South Africa": 1650,
+    "Qatar": 1700, "Jordan": 1620, "Panama": 1700, "Haiti": 1600,
+    "New Zealand": 1550, "Curacao": 1550,
+};
+
+const GROUPS = {
+    "A": ["Mexico", "South Africa", "South Korea", "Czechia"],
+    "B": ["Canada", "Bosnia and Herzegovina", "Qatar", "Switzerland"],
+    "C": ["Brazil", "Morocco", "Haiti", "Scotland"],
+    "D": ["USA", "Paraguay", "Australia", "Turkiye"],
+    "E": ["Germany", "Curacao", "Ivory Coast", "Ecuador"],
+    "F": ["Netherlands", "Japan", "Sweden", "Tunisia"],
+    "G": ["Belgium", "Egypt", "Iran", "New Zealand"],
+    "H": ["Spain", "Cape Verde", "Saudi Arabia", "Uruguay"],
+    "I": ["France", "Senegal", "Iraq", "Norway"],
+    "J": ["Argentina", "Algeria", "Austria", "Jordan"],
+    "K": ["Portugal", "DR Congo", "Uzbekistan", "Colombia"],
+    "L": ["England", "Croatia", "Ghana", "Panama"],
+};
+
+const AVG_TOTAL_GOALS = 2.6;
+const ELO_TO_GOAL = 200.0;
+
+function expectedGoals(eloA, eloB) {
+    const diff = (eloA - eloB) / ELO_TO_GOAL;
+    const lamA = Math.max(0.15, AVG_TOTAL_GOALS / 2 + diff / 2);
+    const lamB = Math.max(0.15, AVG_TOTAL_GOALS / 2 - diff / 2);
+    return [lamA, lamB];
+}
+
+function poissonSample(lam) {
+    const L = Math.exp(-lam);
+    let k = 0, p = 1.0;
+    do { k++; p *= Math.random(); } while (p > L);
+    return k - 1;
+}
+
+function playMatch(teamA, teamB) {
+    const [lamA, lamB] = expectedGoals(ELO[teamA], ELO[teamB]);
+    return [poissonSample(lamA), poissonSample(lamB)];
+}
+
+function playKnockoutDetailed(teamA, teamB) {
+    let [ga, gb] = playMatch(teamA, teamB);
+    let penalties = false;
+    let winner;
+    if (ga > gb) winner = teamA;
+    else if (gb > ga) winner = teamB;
+    else {
+        penalties = true;
+        const pA = 0.5 + (ELO[teamA] - ELO[teamB]) / 4000;
+        winner = Math.random() < pA ? teamA : teamB;
+    }
+    return { teamA, teamB, ga, gb, winner, penalties };
+}
+
+function simulateGroup(teams) {
+    const stats = {};
+    teams.forEach(t => stats[t] = { pts: 0, gf: 0, ga: 0 });
+    for (let i = 0; i < teams.length; i++) {
+        for (let j = i + 1; j < teams.length; j++) {
+            const t1 = teams[i], t2 = teams[j];
+            const [g1, g2] = playMatch(t1, t2);
+            stats[t1].gf += g1; stats[t1].ga += g2;
+            stats[t2].gf += g2; stats[t2].ga += g1;
+            if (g1 > g2) stats[t1].pts += 3;
+            else if (g2 > g1) stats[t2].pts += 3;
+            else { stats[t1].pts += 1; stats[t2].pts += 1; }
+        }
+    }
+    const ranked = [...teams].sort((a, b) => {
+        if (stats[b].pts !== stats[a].pts) return stats[b].pts - stats[a].pts;
+        const gdA = stats[a].gf - stats[a].ga, gdB = stats[b].gf - stats[b].ga;
+        if (gdB !== gdA) return gdB - gdA;
+        return stats[b].gf - stats[a].gf;
+    });
+    return [ranked, stats];
+}
+
+function simulateTournamentDetailed() {
+    let winners = [], runnersUp = [], thirds = [];
+    const groupResults = {};
+
+    for (const g in GROUPS) {
+        const [ranked, stats] = simulateGroup(GROUPS[g]);
+        winners.push(ranked[0]);
+        runnersUp.push(ranked[1]);
+        const t3 = ranked[2];
+        thirds.push([t3, stats[t3].pts, stats[t3].gf - stats[t3].ga, stats[t3].gf]);
+        groupResults[g] = ranked.map(t => ({
+            team: t, pts: stats[t].pts, gf: stats[t].gf, ga: stats[t].ga
+        }));
+    }
+
+    thirds.sort((a, b) => b[1] - a[1] || b[2] - a[2] || b[3] - a[3]);
+    const bestThirds = thirds.slice(0, 8).map(t => t[0]);
+
+    let roundTeams = [...winners, ...runnersUp, ...bestThirds];
+    for (let i = roundTeams.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [roundTeams[i], roundTeams[j]] = [roundTeams[j], roundTeams[i]];
+    }
+
+    const roundNames = ["Round of 32", "Round of 16", "Quarterfinals", "Semifinals", "Final"];
+    const rounds = [];
+    let idx = 0;
+
+    while (roundTeams.length > 1) {
+        const matches = [];
+        const nextRound = [];
+        for (let i = 0; i < roundTeams.length; i += 2) {
+            const result = playKnockoutDetailed(roundTeams[i], roundTeams[i + 1]);
+            matches.push(result);
+            nextRound.push(result.winner);
+        }
+        rounds.push({ name: roundNames[idx] || `Round ${idx+1}`, matches });
+        roundTeams = nextRound;
+        idx++;
+    }
+
+    return { rounds, champion: roundTeams[0], groupResults, qualifiedThirds: bestThirds };
+}
+
+// ---------------------------------------------------------------------
+// RENDERING
+// ---------------------------------------------------------------------
+function renderGroups(data) {
+    const container = document.getElementById('groupsContainer');
+    container.innerHTML = '';
+    let delay = 0;
+    Object.keys(data.groupResults).sort().forEach(letter => {
+        const box = document.createElement('div');
+        box.className = 'group-box';
+        box.style.animationDelay = (delay * 0.03) + 's';
+        delay++;
+        const title = document.createElement('h4');
+        title.textContent = 'Group ' + letter;
+        box.appendChild(title);
+        data.groupResults[letter].forEach((row, pos) => {
+            const rowEl = document.createElement('div');
+            const qualifies = pos < 2 || data.qualifiedThirds.includes(row.team);
+            rowEl.className = 'group-row ' + (qualifies ? 'qualified' : 'eliminated');
+            const gd = row.gf - row.ga;
+            rowEl.innerHTML = `<span class="pos">${pos + 1}</span><span>${row.team}</span><span>${row.pts}pt (${gd >= 0 ? '+' : ''}${gd})</span>`;
+            box.appendChild(rowEl);
+        });
+        container.appendChild(box);
+    });
+}
+
+function makeMatchBox(m, colStart, colSpan, delayIndex) {
+    const box = document.createElement('div');
+    box.className = 'match-box';
+    box.style.gridColumn = `${colStart} / span ${colSpan}`;
+    box.style.animationDelay = (delayIndex * 0.03) + 's';
+    const line1 = document.createElement('div');
+    line1.className = 'team ' + (m.winner === m.teamA ? 'winner' : 'loser');
+    line1.innerHTML = `<span>${m.teamA}</span><span>${m.ga}</span>`;
+    const line2 = document.createElement('div');
+    line2.className = 'team ' + (m.winner === m.teamB ? 'winner' : 'loser');
+    line2.innerHTML = `<span>${m.teamB}</span><span>${m.gb}</span>`;
+    box.appendChild(line1);
+    box.appendChild(line2);
+    if (m.penalties) {
+        const pen = document.createElement('div');
+        pen.className = 'pen-tag';
+        pen.textContent = 'Won on penalties';
+        box.appendChild(pen);
+    }
+    return box;
+}
+
+function makeConnectorRow(count, single) {
+    const row = document.createElement('div');
+    row.style.display = 'contents';
+    for (let i = 0; i < count; i++) {
+        const span = 16 / count;
+        const conn = document.createElement('div');
+        conn.className = 'connector' + (single ? ' single' : '');
+        conn.style.gridColumn = `${i * span + 1} / span ${span}`;
+        row.appendChild(conn);
+    }
+    return row;
+}
+
+function renderBracket(data) {
+    const grid = document.getElementById('bracketGrid');
+    grid.innerHTML = '';
+    const totalCols = 16;
+
+    data.rounds.forEach((round) => {
+        const label = document.createElement('div');
+        label.className = 'round-label';
+        label.textContent = round.name;
+        grid.appendChild(label);
+
+        const numMatches = round.matches.length;
+        const span = totalCols / numMatches;
+        round.matches.forEach((m, i) => {
+            const box = makeMatchBox(m, i * span + 1, span, i);
+            grid.appendChild(box);
+        });
+
+        grid.appendChild(makeConnectorRow(numMatches, numMatches === 1));
+    });
+
+    const champLabel = document.createElement('div');
+    champLabel.className = 'round-label';
+    champLabel.textContent = 'Champion';
+    grid.appendChild(champLabel);
+
+    const champBox = document.createElement('div');
+    champBox.className = 'champion-box';
+    champBox.innerHTML = `<div class="spark"></div><span class="label">Simulated champion</span><span class="name">${data.champion}</span>`;
+    grid.appendChild(champBox);
+
+    
+}
+
+function startSimulateTournament() {
+    const data = simulateTournamentDetailed();
+    document.getElementById('flowSection').style.display = 'block';
+    renderGroups(data);
+    renderBracket(data);
+    document.getElementById('flowSection').scrollIntoView({ behavior: 'smooth' });
+}
+
+function monteCarlo(nSims) {
+    const titleCount = {};
+    for (let i = 0; i < nSims; i++) {
+        const champion = simulateTournamentDetailed().champion;
+        titleCount[champion] = (titleCount[champion] || 0) + 1;
+    }
+    const allTeams = {};
+    Object.keys(ELO).forEach(t => allTeams[t] = 0);
+    Object.keys(titleCount).forEach(t => allTeams[t] = titleCount[t]);
+    return Object.entries(allTeams).sort((a, b) => b[1] - a[1]);
+}
+
+function startMonteCarlo() {
+    document.getElementById('mcSection').style.display = 'none';
+    document.getElementById('mcLoading').style.display = 'block';
+    document.getElementById('mcLoading').scrollIntoView({ behavior: 'smooth' });
+
+    setTimeout(() => {
+        const nSims = 10000;
+        const results = monteCarlo(nSims);
+
+        document.getElementById('mcLoading').style.display = 'none';
+        document.getElementById('mcSection').style.display = 'block';
+        const status = document.getElementById('status');
+        const table = document.getElementById('results');
+        status.textContent = `${nSims.toLocaleString()} simulated tournaments · all 48 teams shown`;
+        table.innerHTML = '<tr><th>Rank</th><th>Team</th><th>Win %</th></tr>';
+        results.forEach(([team, count], i) => {
+            const pct = (100 * count / nSims).toFixed(2);
+            table.innerHTML += `<tr><td>${i + 1}</td><td>${team}</td><td>${pct}%</td></tr>`;
+        });
+    }, 350);
+}
+</script>
+</body>
+</html>
